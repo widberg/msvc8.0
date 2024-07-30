@@ -1,0 +1,708 @@
+//+-------------------------------------------------------------------------
+//
+//  Microsoft Windows
+//  Copyright (c) Microsoft Corporation. All rights reserved.
+//
+//  Shell COM interfaces documented for compliance.  Not guaranteed to be supported across OS versions.
+//--------------------------------------------------------------------------
+
+import "objidl.idl";
+import "ocidl.idl";
+import "oaidl.idl";
+import "shtypes.idl";
+import "tlogstg.idl";
+import "shobjidl.idl";
+import "hlink.idl";
+import "exdisp.idl";
+
+cpp_quote("#define TLOG_BACK  -1")
+cpp_quote("#define TLOG_FORE   1")
+cpp_quote("")
+cpp_quote("#define TLMENUF_INCLUDECURRENT      0x00000001")
+cpp_quote("#define TLMENUF_CHECKCURRENT        (TLMENUF_INCLUDECURRENT | 0x00000002)")
+cpp_quote("#define TLMENUF_BACK                0x00000010  // Default")
+cpp_quote("#define TLMENUF_FORE                0x00000020")
+cpp_quote("#define TLMENUF_BACKANDFORTH        (TLMENUF_BACK | TLMENUF_FORE | TLMENUF_INCLUDECURRENT)")
+cpp_quote("")
+
+// ITravelEntry
+[
+    uuid(F46EDB3B-BC2F-11d0-9412-00AA00A3EBD3), // IID_ITravelEntry
+    object,
+    local,
+    hidden,
+    helpstring("ITravelEntry interface"),
+    helpcontext(0x0000)
+]
+interface ITravelEntry : IUnknown
+{
+    //  TravelEntries are created and maintained by the TravelLog.
+    //  most callers should never use ITravelEntry directly.  it is used internally by ITravelLog
+    //  IUnknown for all of these methods is the browser or frame for the TravelEntry operation
+    [helpstring("Invokes the entry."), helpcontext(0x0000)]
+    HRESULT Invoke(
+        [in] IUnknown *punk);
+        
+    [helpstring("Updates the entry."), helpcontext(0x0000)]
+    HRESULT Update(
+        [in] IUnknown *punk,
+        [in] BOOL fIsLocalAnchor);
+        
+    [helpstring("Retrieves the pidl associated with the entry."), helpcontext(0x0000)]
+    HRESULT GetPidl(
+        [out] LPITEMIDLIST * ppidl);
+};
+
+
+// ITravelLog
+[
+    uuid(66A9CB08-4802-11d2-A561-00A0C92DBFE8), // IID_ITravelLog
+    object,
+    local,
+    hidden,
+    helpstring("ITravelLog interface"),
+    helpcontext(0x0000)
+]
+interface ITravelLog : IUnknown
+{
+    //  ITravelEntry is created and owned by the browser.
+    //  IUnknown *punk for all of these methods is the nearest browser or frame
+
+    //  AddEntry is used to instruct the TravelLog to add a new entry
+    //  for a pending navigation 
+    [helpstring("Adds an entry to the travel log."), helpcontext(0x0000)]
+    HRESULT AddEntry(
+        [in] IUnknown * punk,
+        [in] BOOL fIsLocalAnchor);
+    
+    //  UpdateEntry is used to instruct the TravelLog to save browser state 
+    //  of the current entry, due to pending navigation
+    [helpstring("Updates an entry in the travel log."), helpcontext(0x0000)]
+    HRESULT UpdateEntry(
+        [in] IUnknown * punk,
+        [in] BOOL fIsLocalAnchor);
+    
+    //  UpdateExternal() is a special update for navigations that originated out of proc
+    //  via IHLinkFrame.  the punkHLBrowseContext is retrieved via IHlinkFrame::GetBrowseContext()
+    [helpstring("Updates an external entry."), helpcontext(0x0000)]
+    HRESULT UpdateExternal(
+        [in] IUnknown * punk,
+        [in] IUnknown * punkHLBrowseContext);
+
+    //  Travel() instructs the browser to navigate iOffset number of travel entries
+    //  forward or backward.  this is essentially a convenient way to call GetTravelEntry()->Invoke()
+    [helpstring("Travels to an entry."), helpcontext(0x0000)]
+    HRESULT Travel(
+        [in] IUnknown * punk,
+        [in] int iOffset);
+
+    //  GetTravelEntry() is typically used to discover whether back and forward should be enabled
+    //  eg, if (SUCCEEDED(GetTravelEntry(punkBrowser, TLOG_BACK, NULL))) { //  enable back button }
+    [helpstring("Retrieves an entry at the specified offset."), helpcontext(0x0000)]
+    HRESULT GetTravelEntry(
+        [in]  IUnknown * punk, 
+        [in]  int iOffset,
+        [optional, out] ITravelEntry ** ppte);
+    
+    //  FindTravelEntry() can be used to discover whether specific locations are in the TravelLog
+    [helpstring("Finds the entry with the specified pidl."), helpcontext(0x0000)]
+    HRESULT FindTravelEntry(
+        [in]  IUnknown * punk,
+        [in]  LPCITEMIDLIST pidl,
+        [out] ITravelEntry ** ppte);
+
+    //  GetToolTipText() used in UI to get a display string for a TravelEntry 
+    //  idsTemplate is unused.
+    [helpstring("Retrieves tool tip text for an entry."), helpcontext(0x0000)]
+    HRESULT GetToolTipText(
+        [in]  IUnknown * punk,
+        [in]  int iOffset,
+        [in]  int idsTemplate,
+        [out, size_is(cchText)] LPWSTR pwzText,
+        [in]  DWORD cchText);
+
+    //  InsertMenuEntries() populates a menu at the specified nPos insertion point
+    //  the max number of entries inserted is the difference between idFirst and idLast
+    //  dwFlags controls what kinds of entries to add to the menu
+    [helpstring("Inserts entries into the specified menu."), helpcontext(0x0000)]
+    HRESULT InsertMenuEntries(
+        [in] IUnknown * punk,
+        [in] HMENU hmenu,
+        [in] int nPos,
+        [in] int idFirst,
+        [in] int idLast,
+        [in] DWORD dwFlags);    //  use TLMENUF
+
+    //  duplicates the contents of the TravelLog
+    [helpstring("Clones the current travel log."), helpcontext(0x0000)]
+    HRESULT Clone(
+        [out] ITravelLog ** pptl);
+
+    //  returns to total number of entries
+    [helpstring("Returns the number of entries in the travel log."), helpcontext(0x0000)]
+    DWORD CountEntries(
+        [in] IUnknown * punk);
+
+    //  this drops the result of AddEntry() in the case of failed navigations
+    [helpstring("Reverts to the current entry."), helpcontext(0x0000)]
+    HRESULT Revert();
+};
+
+
+// CIE4ConnectionPoint is almost a COM interface except for calling convention is different
+cpp_quote("#ifdef __cplusplus")
+cpp_quote("class CIE4ConnectionPoint : public IConnectionPoint")
+cpp_quote("{")
+    // 
+cpp_quote("    // This is how you actually fire the events")
+cpp_quote("    // Those called by shell32 are virtual")
+cpp_quote("    virtual HRESULT DoInvokeIE4(BOOL *pf, void **ppv, DISPID dispid, DISPPARAMS *pdispparams) PURE;")
+
+    // Not implemented.  Returns E_NOTIMPL.
+cpp_quote("    // This helper function does work that callers of DoInvoke often need done")
+cpp_quote("    virtual HRESULT DoInvokePIDLIE4(DISPID dispid, LPCITEMIDLIST pidl, BOOL fCanCancel) PURE;")
+cpp_quote("};")
+cpp_quote("#else // !__cplusplus")
+typedef void *CIE4ConnectionPoint;
+cpp_quote("#endif// !__cplusplus")
+
+
+
+[
+    uuid(0D7D1D00-6FC0-11D0-A974-00C04FD705A2),
+    object,
+    local
+]
+interface IExpDispSupport : IUnknown
+{
+    // Used to get a connection point for browser events. The riid may be
+    // DIID_DWebBrowserEvents, DIID_DWebBrowserEvents2, or IID_IPropertyNotifySink.
+    HRESULT FindCIE4ConnectionPoint(REFIID riid, CIE4ConnectionPoint **ppccp);
+
+    // Similar to IOleControlSite::TranslateAccelerator
+    HRESULT OnTranslateAccelerator(MSG  *pMsg, DWORD grfModifiers);
+
+    // Used to get ambient properties
+    HRESULT OnInvoke(DISPID dispidMember, REFIID iid, LCID lcid, WORD wFlags, DISPPARAMS *pdispparams,
+                        VARIANT *pVarResult, EXCEPINFO *pexcepinfo, UINT *puArgErr);
+};
+
+
+typedef [v1_enum] enum tagBNSTATE
+{
+    BNS_NORMAL = 0,         // Normal state that we are in
+    BNS_BEGIN_NAVIGATE = 1, // A Begin navigate event has happened.
+    BNS_NAVIGATE = 2        // A Navigate event has happened..."
+
+} BNSTATE; // The navigate state..."
+
+enum {
+    SBSC_HIDE = 0,
+    SBSC_SHOW = 1,
+    SBSC_TOGGLE = 2,
+    SBSC_QUERY =  3
+};
+
+cpp_quote("//  values for IBrowserService::Get/SetFlags()")
+cpp_quote("#define BSF_REGISTERASDROPTARGET   0x00000001")
+cpp_quote("#define BSF_THEATERMODE            0x00000002")
+cpp_quote("#define BSF_NOLOCALFILEWARNING     0x00000010")
+cpp_quote("#define BSF_UISETBYAUTOMATION      0x00000100")
+cpp_quote("#define BSF_RESIZABLE              0x00000200")
+cpp_quote("#define BSF_CANMAXIMIZE            0x00000400")
+cpp_quote("#define BSF_TOPBROWSER             0x00000800")
+cpp_quote("#define BSF_NAVNOHISTORY           0x00001000")
+cpp_quote("#define BSF_HTMLNAVCANCELED        0x00002000")
+cpp_quote("#define BSF_DONTSHOWNAVCANCELPAGE  0x00004000")
+cpp_quote("#define BSF_SETNAVIGATABLECODEPAGE 0x00008000")
+cpp_quote("#define BSF_DELEGATEDNAVIGATION    0x00010000")
+cpp_quote("#define BSF_TRUSTEDFORACTIVEX      0x00020000")
+
+// grfHLNF flags supported by IBrowserService::NavigateToPidl() (in addition to norml HLNF)
+cpp_quote("#define HLNF_CALLERUNTRUSTED            0x00200000  // The navigate was possibly initiated by a web page by scripting code already on the system")
+cpp_quote("#define HLNF_TRUSTEDFORACTIVEX          0x00400000  // The navigate should allow ActiveX prompts.")
+cpp_quote("#define HLNF_DISABLEWINDOWRESTRICTIONS  0x00800000  // New window is created by url in zone that has the window restrictions security mitigation disabled")
+cpp_quote("#define HLNF_TRUSTFIRSTDOWNLOAD         0x01000000  // New window is result of user initiated action.  Trust it if it immediatly trys to download.")
+cpp_quote("#define HLNF_UNTRUSTEDFORDOWNLOAD       0x02000000  // Trident is navigating to an untrusted non-html file.  If we try to download it, do not.")
+cpp_quote("#define SHHLNF_NOAUTOSELECT             0x04000000  // This navigate should not automatically select History ShellFolder")
+cpp_quote("#define SHHLNF_WRITENOHISTORY           0x08000000  // This navigate should not go in the History ShellFolder")
+cpp_quote("#define HLNF_EXTERNALNAVIGATE           0x10000000")
+cpp_quote("#define HLNF_ALLOW_AUTONAVIGATE         0x20000000")
+cpp_quote("#define HLNF_NEWWINDOWSMANAGED          0x80000000  // If this navigate results in a new window, it should be subject to popup manager.")
+
+[
+    uuid(02ba3b52-0547-11d1-b833-00c04fc9b31f),
+    object,
+    local
+]
+interface IBrowserService : IUnknown
+{
+    // Returns the browser parent's in-place client site
+    HRESULT GetParentSite([out] IOleInPlaceSite** ppipsite);
+
+    // Sets the browser's title.  The IShellView must match either the browser's
+    // current view or the pending view.
+    HRESULT SetTitle(IShellView* psv, LPCWSTR pszName);
+
+    // Gets the browser's title.
+    HRESULT GetTitle(IShellView* psv, [out, size_is(cchName)] LPWSTR pszName, DWORD cchName);
+
+    // Gets an IOleObject for the browser
+    HRESULT GetOleObject([out] IOleObject** ppobjv);
+
+    // Gets the browser's TravelLog
+    HRESULT GetTravelLog([out] ITravelLog** pptl);
+
+    // Used to show or hide various frame controls; id is FCW_STATUS, etc. from
+    // shobjidl.h (or -1 for fullscreen/kiosk mode).  
+    HRESULT ShowControlWindow(UINT id, BOOL fShow);
+
+    // Used to determine whether various frame controls are currently visible.
+    // id is the same as in ShowControlWindow
+    HRESULT IsControlWindowShown(UINT id, [out] BOOL *pfShown);
+
+    // Gets the URL corresponding to the pidl
+    //   pwszName must point to a buffer of at least INTERNET_MAX_URL_LENGTH characters.
+    //   uFlags is one of SHGDN_FORPARSING, SHGDN_FORADDRESSBAR, or SHGDN_NORMAL.
+    HRESULT IEGetDisplayName(LPCITEMIDLIST pidl, [out] LPWSTR pwszName, UINT uFlags);
+
+    // Parses an URL into a pidl
+    //   uiCP is the code page, e.g. CP_ACP
+    //   pwszPath is the URL to parse
+    HRESULT IEParseDisplayName(UINT uiCP, LPCWSTR pwszPath, [out] LPITEMIDLIST *ppidlOut);
+
+    // Does nothing if hres is a success code or E_OUTOFMEMORY or HRESULT_FROM_WIN32(ERROR_CANCELLED).
+    // Otherwise, displays an error dialog.  pwszPath is typically the URL that failed
+    // to parse, and is displayed on the dialog. The HRESULT returned by IEParseDisplayName
+    // can be passed to DisplayParseError without checking for success or failure first.
+    HRESULT DisplayParseError(HRESULT hres, LPCWSTR pwszPath);
+
+    // Navigates the browser to a different location, given by pidl.
+    // grfHLNF is a combination of HLNF flags from hlink.idl (only HLNF_NAVIGATINGBACK and
+    // HLNF_NAVIGATINGFORWARD are supported), SHHLNF_WRITENOHISTORY and SHHLNF_NOAUTOSELECT.
+    HRESULT NavigateToPidl(LPCITEMIDLIST  pidl, DWORD grfHLNF);
+
+    // Sets the current navigation state.  This affects the cursor and animation.
+    HRESULT SetNavigateState(BNSTATE bnstate);
+
+    // Returns the browser's current navigation state.
+    HRESULT GetNavigateState([out] BNSTATE *pbnstate);
+
+    // Updates the browser to the pidl, navigating if necessary. The view must be either
+    // the current view or the pending view.  The optional out parameter indicates whether
+    // navigation occurred.
+    HRESULT NotifyRedirect(IShellView* psv, LPCITEMIDLIST  pidl, [out] BOOL *pfDidBrowse);
+
+    // Tells the browser to update the pidl in the window list. Called after navigation.
+    HRESULT UpdateWindowList();
+
+    // Updates the state of the back and forward buttons.
+    HRESULT UpdateBackForwardState();
+
+    // Sets the BSF_* flags given by dwFlagMask to the states given by dwFlags.
+    HRESULT SetFlags(DWORD dwFlags, DWORD dwFlagMask);
+
+    // Returns the current flags.
+    HRESULT GetFlags([out] DWORD *pdwFlags);
+
+    // Returns S_FALSE if the browser is busy.  Returns S_OK if navigation is allowed.
+    HRESULT CanNavigateNow();
+
+    // Returns a copy of the current pidl.  The caller must free with ILFree.
+    HRESULT GetPidl([out] LPITEMIDLIST *ppidl);
+
+    // Sets the pidl used for zone checking when creating a new window.
+    HRESULT SetReferrer(LPITEMIDLIST  pidl);
+
+    // Returns the index of the browser.  Returns ((DWORD)-1) to indicate the top frame browser.
+    // The index can be used to find a particular browser window.
+    DWORD   GetBrowserIndex();
+
+    // Returns the browser with the given index. Must be released by the caller.
+    HRESULT GetBrowserByIndex(DWORD dwID, [out] IUnknown **ppunk);
+
+    // Returns the IOleObject representing browser's history objct.  The returned IStream and
+    // IBindCtx may be NULL. If the IStream is not NULL, the IOleObject can be QI'd for
+    // IPersistHistory, and the IStream and IBindCtx can be passed to IPersistHistory::LoadHistory.
+    // All 3 pointers must be released by the caller if non-NULL.
+    HRESULT GetHistoryObject([out] IOleObject **ppole, [out] IStream **pstm, [out] IBindCtx **ppbc);
+
+    // Sets the browser's history object. Returns failure if the browser already has a history object.
+    HRESULT SetHistoryObject(IOleObject *pole, BOOL fIsLocalAnchor);
+
+    // Holds a reference to an external object, to avoid reloading the server on reuse.
+    HRESULT CacheOLEServer(IOleObject *pole);
+
+    // Sets a new character code page and returns the previous code page.
+    // Both parameters are optional (may be NULL). Only VT_I4 is supported.
+    HRESULT GetSetCodePage([in] VARIANT* pvarIn, [out] VARIANT* pvarOut);
+
+    // Called when the document object finds an HTTP-EQUIV meta tag and calls
+    // IOleCommandTarget::Exec with OLECMDID_HTTPEQUIV or OLECMDID_HTTPEQUIV_DONE.
+    // The view must be either the current view or the pending view.
+    // fDone is TRUE for OLECMDID_HTTPEQUIV_DONE and FALSE for OLECMDID_HTTPEQUIV.
+    // The VARIANTs are the input and output parameters to IOleCommandTarget::Exec.
+    HRESULT OnHttpEquiv(IShellView* psv, BOOL fDone, [in] VARIANT* pvarargIn, [out] VARIANT* pvarargOut);
+
+    // Returns the browser's pallette handle if there is one.  Returns E_FAIL if there
+    // is no palette.  The caller should NOT call DeleteObject on the handle.
+    HRESULT GetPalette([out] HPALETTE * hpal);
+
+    // Registers the browser in the list of browser windows. If fForceRegister is TRUE
+    // and the window was previously registered, it will unregister and re-register.
+    // The second parameter is one of the ShellWindowTypeConstants values from exdisp.h
+    // (SWC_EXPLORER, SWC_BROWSER, SWC_3RDPARTY, SWC_CALLBACK).
+    HRESULT RegisterWindow(BOOL fForceRegister, int swc);
+};
+
+[
+    uuid(5836FB00-8187-11CF-A12B-00AA004AE837),
+    object,
+    local
+]
+interface IShellService : IUnknown
+{
+    // Called with a non-NULL IUnknown* to inform an object of its owner.
+    // The object may QI for other interfaces and hold references to the owner.
+    // Called again with NULL when closing, at which time the object should
+    // release all references to the owner.
+    // (Very much like IObjectWithSite::SetSite)
+    HRESULT SetOwner(IUnknown* punkOwner);
+};
+
+//
+//  when adding new values, make sure to add to both SET and SUGGEST, and
+//  the code depends on a direct correlation between the level of security
+//  and the value of the enum.  so keep new values in the correct order
+//
+enum {
+    SECURELOCK_NOCHANGE        = -1,
+    SECURELOCK_SET_UNSECURE    = 0,
+    SECURELOCK_SET_MIXED,
+    SECURELOCK_SET_SECUREUNKNOWNBIT,
+    SECURELOCK_SET_SECURE40BIT,
+    SECURELOCK_SET_SECURE56BIT,
+    SECURELOCK_SET_FORTEZZA,
+    SECURELOCK_SET_SECURE128BIT,
+    SECURELOCK_FIRSTSUGGEST,
+    SECURELOCK_SUGGEST_UNSECURE = SECURELOCK_FIRSTSUGGEST,
+    SECURELOCK_SUGGEST_MIXED,
+    SECURELOCK_SUGGEST_SECUREUNKNOWNBIT,
+    SECURELOCK_SUGGEST_SECURE40BIT,
+    SECURELOCK_SUGGEST_SECURE56BIT,
+    SECURELOCK_SUGGEST_FORTEZZA,
+    SECURELOCK_SUGGEST_SECURE128BIT,
+};
+
+
+cpp_quote("#include <pshpack8.h>")
+
+//  IBrowserService2 enables cross DLL, COM based, class inheritance scheme 
+//  for sharing browser code between Internet Explorer and Explorer.
+//  These methods represent the virtual methods for calling super/sub classes
+//  that would be the protected methods in a C++ class inheritance scheme.
+//
+//  BASEBROWSERDATA is the struct of protected members for the base class.
+//  GetBaseBrowserData() is used as an optimization to access the internal state 
+//  which should only be updated by the base browser.
+typedef struct {
+    HWND _hwnd;                     //  toplevel window for the browser
+    ITravelLog  *_ptl;              
+    IHlinkFrame *_phlf;             //  only valid on first navigations from Hlink applications (office)
+    IWebBrowser2    *_pautoWB2;     
+    IExpDispSupport *_pautoEDS; 
+    IShellService   *_pautoSS;  
+    int _eSecureLockIcon;           //  default to SECURELOCK_SET_UNSECURE
+    DWORD _fCreatingViewWindow :1;  //  used to detect when the 
+    UINT _uActivateState;   
+
+    LPCITEMIDLIST  _pidlNewShellView;  //  temporary holding place for _pidlPending on first navigate
+
+    IOleCommandTarget* _pctView;    //  cached QI on _psv;
+
+    //  current location members
+    LPITEMIDLIST _pidlCur;          //  current navigated location of the browser same result as IBrowserService::GetPidl()
+    IShellView *_psv;               //  view bound of _pidlCur via IShellFolder::CreateViewObject()
+    IShellFolder *_psf;             //  folder bound off of _pidlCur
+    HWND        _hwndView;          //  window returned from _psv->CreateViewWindow();
+    LPWSTR      _pszTitleCur;       //  UI text for current location 
+
+    //  pending location members:  used while navigation is in progress.  they will move to current location members
+    LPITEMIDLIST _pidlPending;      //  pending target location
+    IShellView *_psvPending;        //  pending target view 
+    IShellFolder *_psfPending;      //  pending target folder
+    HWND        _hwndViewPending;   //  pending view's window
+    LPWSTR      _pszTitlePending;   //  pending target's title
+
+    BOOL _fIsViewMSHTML;            //  TRUE when hosting webcontent, false when hosting folder content
+    BOOL _fPrivacyImpacted;         //  TRUE when there is a privacy concern
+
+} BASEBROWSERDATA, *LPBASEBROWSERDATA;
+typedef const BASEBROWSERDATA *LPCBASEBROWSERDATA;
+
+//
+// view priority values
+//
+// NOTE: left gaps so that we can add more later
+//
+cpp_quote("#define VIEW_PRIORITY_RESTRICTED    0x00000070  // a shell restriction is in place that forces this view to be the one we use")
+cpp_quote("#define VIEW_PRIORITY_CACHEHIT      0x00000050  // we have registry info for the view, so the user has been there before")
+cpp_quote("#define VIEW_PRIORITY_STALECACHEHIT 0x00000045  // we have stale registry info for the view, so we fall back to the 'all folders like this' default")
+cpp_quote("#define VIEW_PRIORITY_USEASDEFAULT  0x00000043  // 'Use As Default' is more important than shellext, but less than a stale cache")
+cpp_quote("#define VIEW_PRIORITY_SHELLEXT      0x00000040  // next we let the shell extension have its say")
+cpp_quote("#define VIEW_PRIORITY_CACHEMISS     0x00000030  // if we have a cache miss, then we fall back to the 'all folders like this' default")
+cpp_quote("#define VIEW_PRIORITY_INHERIT       0x00000020  // then try to inherit the view from the previous window")
+cpp_quote("#define VIEW_PRIORITY_SHELLEXT_ASBACKUP 0x0015  // If classic view state is enabled we want the shell to default to an inheritted view")
+cpp_quote("#define VIEW_PRIORITY_DESPERATE     0x00000010  // just pick the last view that the window supports")
+cpp_quote("#define VIEW_PRIORITY_NONE          0x00000000  // dont have a view yet")
+
+typedef struct tagFolderSetData {
+    FOLDERSETTINGS  _fs;
+    SHELLVIEWID     _vidRestore;
+    DWORD           _dwViewPriority; // one of the VIEW_PRIORITY_* from above
+} FOLDERSETDATA, *LPFOLDERSETDATA;
+
+cpp_quote("#if 0 //  needs to be defined by other headers")
+typedef void *HMONITOR; 
+cpp_quote("#endif")
+cpp_quote("#if !defined(HMONITOR_DECLARED) && (WINVER < 0x0500)")
+cpp_quote("    DECLARE_HANDLE(HMONITOR);")
+cpp_quote("#define HMONITOR_DECLARED")
+cpp_quote("#endif")
+
+typedef struct SToolbarItem {
+    IDockingWindow * ptbar;
+    BORDERWIDTHS    rcBorderTool;
+    LPWSTR          pwszItem;
+    BOOL            fShow;
+    HMONITOR        hMon;
+} TOOLBARITEM, *LPTOOLBARITEM;
+
+cpp_quote("#define ITB_VIEW        ((UINT)-1)      // view")
+
+cpp_quote("#include <poppack.h>")
+
+[
+    uuid(68BD21CC-438B-11d2-A560-00A0C92DBFE8),
+    object,
+    local
+]
+interface IBrowserService2 : IBrowserService
+{
+    //  used to share window procs.  the derived class calls into the base class
+    LRESULT WndProcBS(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    //  used by the folder settings dialog to make the current view mode the default for all folders
+    HRESULT SetAsDefFolderSettings();
+
+    //  used to negotiate the allowed size for the view
+    HRESULT GetViewRect(RECT * prc);
+
+    //  called by the base class on the derived class in response to a WM_SIZE
+    HRESULT OnSize(WPARAM wParam);
+
+    //  called by the base class on the derived class in response to a WM_CREATE
+    HRESULT OnCreate(struct tagCREATESTRUCTW * pcs);
+    
+    //  called by the base class on the derived class in response to a WM_COMMAND
+    LRESULT OnCommand(WPARAM wParam, LPARAM lParam);
+
+    //  called by the base class on the derived class in response to a WM_DESTROY
+    HRESULT OnDestroy();
+
+    //  called by the base class on the derived class in response to a WM_NOTIFY
+    LRESULT OnNotify(struct tagNMHDR * pnm);
+
+    //  called by the base class on the derived class in response to a WM_SETFOCUS
+    HRESULT OnSetFocus();
+
+    //  coordinates activation between base and derived class for subframes
+    HRESULT OnFrameWindowActivateBS(BOOL fActive);
+
+    //  coordinates view lifetime between base and derived class
+    HRESULT ReleaseShellView( );
+
+    //  coordinates updating state while switching between a current and pending view
+    HRESULT ActivatePendingView( );
+
+    //  coordinates updating state when creating a new view window
+    HRESULT CreateViewWindow(IShellView* psvNew, IShellView* psvOld, LPRECT prcView, HWND* phwnd);
+
+    //  coordinates allows derived class to add property sheets to base class
+    HRESULT CreateBrowserPropSheetExt(REFIID riid, void **ppv);
+
+    //  direct access to _hwndView
+    HRESULT GetViewWindow(HWND * phwndView);
+
+    //  returns a const BBD owned by the base class (RO)
+    HRESULT GetBaseBrowserData(LPCBASEBROWSERDATA * pbbd);
+
+    //  returns a non-const BBD owned by the base class (RW)   
+    LPBASEBROWSERDATA PutBaseBrowserData();
+
+    //  allows derived class specify travel log
+    HRESULT InitializeTravelLog(ITravelLog* ptl, DWORD dw);
+
+    //  informs base class that it is the top most browser instance
+    HRESULT SetTopBrowser();
+
+    //  base class supports offline initialization via SBSC_TOGGLE or SBSC_QUERY
+    HRESULT Offline(int iCmd);
+
+    //  informs base class whether to allow view resizing
+    HRESULT AllowViewResize(BOOL f);
+
+    //  updates BBD._uActivateState
+    HRESULT SetActivateState(UINT u);
+
+    //  updates BBD._eSecureLockIcon and UI based on SECURELOCK_*
+    HRESULT UpdateSecureLockIcon(int eSecureLock);
+
+    //  enables download manager in base class
+    HRESULT InitializeDownloadManager();
+
+    //  enables transitions
+    HRESULT InitializeTransitionSite();
+
+    //  coordinates initializing state between base and derived classes
+    HRESULT _Initialize(HWND hwnd, IUnknown *pauto);
+
+    //  derived class can request base class to cancel pending navigations
+    HRESULT _CancelPendingNavigationAsync();
+
+    //  derived class can request base class to cancel pending views
+    HRESULT _CancelPendingView();
+
+    //  allows base class to check if view needs to save changes before closing view
+    HRESULT _MaySaveChanges();
+
+    //  request base class to ask the view pause (eg for minimize, etc)
+    HRESULT _PauseOrResumeView(BOOL fPaused);
+
+    //  asks the base class whether modal UI are visible (blocks minimize or close)
+    HRESULT _DisableModeless();
+
+    //  navigates the base class to a new location synchronously
+    HRESULT _NavigateToPidl(LPCITEMIDLIST pidl, DWORD grfHLNF, DWORD dwFlags);
+
+    //  coordinates renaming current view in response to a NotifyRedirect()
+    HRESULT _TryShell2Rename(IShellView* psv, LPCITEMIDLIST pidlNew);
+
+    //  coordinates updating state while switching between a current and pending view (called by ActivatePendingView())
+    HRESULT _SwitchActivationNow();
+
+    //  allows derived class to broadcast IOleCommandTarget::Exec() as it pleases
+    HRESULT _ExecChildren(IUnknown *punkBar, BOOL fBroadcast,
+                              const GUID *pguidCmdGroup, DWORD nCmdID, DWORD nCmdexecopt,
+                              VARIANTARG *pvarargIn, VARIANTARG *pvarargOut);
+
+    //  allows derived class to broadcast SendMessage() as it pleases
+    HRESULT _SendChildren(HWND hwndBar, BOOL fBroadcast, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    //  returns the FSD specified by the derived class
+    HRESULT GetFolderSetData(struct tagFolderSetData* pfsd);
+
+    //  coordinates current focus between derived class's toolbars and the view (ITB_VIEW)
+    HRESULT _OnFocusChange(UINT itb);
+
+    //  allows derived class a chance to update its windows after a sizing event
+    HRESULT v_ShowHideChildWindows(BOOL fChildOnly);
+
+    //  gets the last toolbar with focus (returns ITB_VIEW if it was the view)
+    UINT _get_itbLastFocus();
+
+    //  sets the last toolbar with focus (use ITB_VIEW for the view)
+    HRESULT _put_itbLastFocus(UINT itbLastFocus);
+
+    //  request the base class to update the view with the appropriate SVUIA_STATUS state
+    HRESULT _UIActivateView(UINT uState);
+
+    //  part of view rect negotiations.  
+    //  called by GetViewRect()
+    //  used with _GetEffectiveClientArea() to determine the rect for the view
+    HRESULT _GetViewBorderRect(RECT* prc);
+
+    //  part of view rect negotiations.  
+    //  called when the allowable view rect has changed.  this should call the other view rect fx to do its work 
+    HRESULT _UpdateViewRectSize();
+    
+    //  part of view rect negotiations.  
+    //  called in response to add/remove of toolbars (using IDockingWindowSite or IDockingWindowFrame)
+    //  default implementation calls _ResizeView()
+    HRESULT _ResizeNextBorder(UINT itb);
+
+    //  part of view rect negotiations.  
+    //  calls _UpdateViewRectSize() then updates the view using IOleInPlaceActiveObject::ResizeBorder()
+    HRESULT _ResizeView();
+
+    //  part of view rect negotiations.  
+    //  used with _GetViewBorderRect() to determine the rect for the view
+    HRESULT _GetEffectiveClientArea(LPRECT lprectBorder, HMONITOR hmon);
+
+    //  stream used for loading or saving view state (view specific format)
+    IStream* v_GetViewStream(LPCITEMIDLIST pidl, DWORD grfMode, LPCWSTR pwszName);
+
+    //  call SendMessage(BBD._hwndView)
+    LRESULT ForwardViewMsg(UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    //  derived class implements for use with IShellBrowser::TranslateAcceleratorSB
+    HRESULT SetAcceleratorMenu(HACCEL hacc);
+
+    //  derived class implements, returns number of toolbars in browser
+    int _GetToolbarCount();
+
+    //  derived class implements, itb is the index of the toolbar item to retrieve
+    LPTOOLBARITEM _GetToolbarItem(int itb);
+
+    //  derived class implements, state persistence for toolbars
+    HRESULT _SaveToolbars(IStream* pstm);
+
+    //  derived class implements, state persistence for toolbars
+    HRESULT _LoadToolbars(IStream* pstm);
+
+    //  requests closing the toolbars hosted by the derived class
+    HRESULT _CloseAndReleaseToolbars(BOOL fClose);
+
+    //  called when translating accelerators, and checking to determine how to cycle focus between the view and toolbars
+    HRESULT v_MayGetNextToolbarFocus(LPMSG lpMsg, UINT itbNext, int citb, LPTOOLBARITEM * pptbi, HWND * phwnd);
+
+    //  called by class implementation of _ResizeNextBorder()
+    HRESULT _ResizeNextBorderHelper(UINT itb, BOOL bUseHmonitor);
+
+    //  returns the index of the toolbar item based on COM identity rules 
+    UINT _FindTBar(IUnknown* punkSrc);
+
+    //  called when translating accelerators, if v_MayGetNextToolbarFocus() doesnt return S_OK;
+    HRESULT _SetFocus(LPTOOLBARITEM ptbi, HWND hwnd, LPMSG lpMsg);
+
+    //  called by derived class to translate accelerators    
+    HRESULT v_MayTranslateAccelerator(MSG* pmsg);
+
+    //  called as part of the implmentation of IDockingWindowSite::GetBorderDW
+    HRESULT _GetBorderDWHelper(IUnknown* punkSrc, LPRECT lprectBorder, BOOL bUseHmonitor);
+
+    //  called by base class when navigating to validate zone crossing
+    HRESULT v_CheckZoneCrossing(LPCITEMIDLIST pidl);
+
+};
+
+
+[
+    uuid(27D7CE21-762D-48F3-86F3-40E2FD3749C4),
+    object,
+    local
+]
+interface IBrowserService3 : IBrowserService2
+{
+    //  part of view rect negotiations.  
+    //  called by _UpdateViewRectSize() after determining the rect size
+    HRESULT _PositionViewWindow(HWND hwnd, LPRECT prc); 
+
+    typedef enum
+    {
+        IEPDN_BINDINGUI = 0x00000001,   // Allows IEParseDisplayNameEx to show UI during binding
+    } IEPDNFLAGS;
+    //  replaces IBrowserService::IEParseDisplayName().  adds a flag for showing UI if necessary
+    HRESULT IEParseDisplayNameEx(UINT uiCP, LPCWSTR pwszPath, DWORD dwFlags, LPITEMIDLIST * ppidlOut);
+};
+

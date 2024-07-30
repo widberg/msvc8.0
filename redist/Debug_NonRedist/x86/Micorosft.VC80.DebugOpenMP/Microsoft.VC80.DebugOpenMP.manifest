@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Copyright © 1981-2001 Microsoft Corporation -->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+    <noInheritable/>
+    <assemblyIdentity type="win32" name="Microsoft.VC80.DebugOpenMP" version="8.0.50727.42" processorArchitecture="x86" publicKeyToken="1fc8b3b9a1e18e3b"/>
+    <file name="vcompd.dll" hash="778ca30217b93eaba5f4b15d36b5799b3215f739" hashalg="SHA1"/>
+</assembly>
