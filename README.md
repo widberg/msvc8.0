@@ -1,4 +1,6 @@
-# msvc8.0
+# msvc8.0p
+
+This branch contains the patched compiler. The original compiler is in the `main` branch. For information about the patching see the [msvc8.0_patcher repository](https://github.com/widberg/msvc8.0_patcher).
 
 This repository contains a portable version of the MSVC 8.0 x86 toolchain, inspired by [itsmattkc/MSVC420](https://github.com/itsmattkc/MSVC420). All files were extracted from the [Visual Studio 2005 Professional Edition installation media](https://archive.org/details/en_vs_2005_pro_dvd_202207) via installation on a [Windows XP Pro SP3 VM](https://archive.org/details/xp51_20191108). The root directory of the repository contains files extracted from the `VC` directory of the installation media, with non-x86 files removed. Additionally, the `mspdb*.*` and `msobj*.dll` files were extracted from the `Common7\IDE` directory of the installation media and added to the `bin` directory. Finally, the `bin/vcvars32.bat` file was modified to work with the portable toolchain.
 
